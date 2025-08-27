@@ -22,8 +22,9 @@ enum MENU_ITEM_TYPE {
 	BOOL_VALUE,
 	LONG_VALUE,
 	SMALL_FLOAT_VALUE,
-    LIST_VALUE
-};
+    DROP_DOWN_LIST_VALUE,
+    ROTARY_LIST_VALUE
+};  
 
 class BaseMenu {
 protected:
@@ -110,14 +111,28 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuListValue : public BaseMenu {
+class MenuDropDownListValue : public BaseMenu {
 protected:
     int *value = nullptr;
-    char **list = nullptr;
-    int listSize = 0;
     void displayValue() override;
 public:
-    MenuListValue(char *dispText, char **list, int listSize, int *value);
+    char **list = nullptr;
+    int listSize = 0;
+    MenuDropDownListValue(char *dispText, char **list, int listSize, int *value);
+    void takeFocus() override;
+    void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
+};
+
+class MenuRotaryListValue : public BaseMenu {
+protected:
+    int *value = nullptr;
+    void displayValue() override;
+public:
+    char **list = nullptr;
+    int listSize = 0;
+    MenuRotaryListValue(char *dispText, char **list, int listSize, int *value);
+	void display(int row, bool select) override;
+    void takeFocus() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 

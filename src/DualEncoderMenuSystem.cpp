@@ -32,7 +32,19 @@ byte returnSymbol[] = {
     0b00100    
  }; // Custom character for return symbol
 
-void BaseMenu::encoderAturned(long value)
+byte rotateSymbol[] = {
+    0b11111,
+    0b10001,
+    0b10101,
+    0b10101,
+    0b10101,
+    0b11101,
+    0b00001,    
+    0b11111
+ }; // Custom character for return symbol
+
+
+ void BaseMenu::encoderAturned(long value)
 {
     if (currentMenu) currentMenu->inputHandler(ENCODER_SOURCE::A, ENCODER_EVENT::TURNED, value);
 }
@@ -67,15 +79,28 @@ void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *disp
     lcd->backlight();
     lcd->createChar(1, returnSymbol);
     lcd->createChar(2, enterSymbol);
-    lcd->clear();
+    lcd->createChar(3, rotateSymbol);
+
     lcd->setCursor(0, 0);
     initialised = true;
 }
 
 BaseMenu::BaseMenu(char *dispText)
 {
-    this->dispText = dispText;
     this->type = MENU_ITEM_TYPE::NONE;
+    if(strlen(dispText) <= 14)
+        this->dispText = dispText;
+    else {
+        // Try to AVOID using overly long strings as this will INCREASE RAM usage
+        // by creating multiple copies of the string in RAM.  These will NOT be freed
+        // until the menu system is destroyed (which is never in the current implementation).
+        // That's because menu objects need to be permanent (not constucted on the stack) so that
+        // they remain valid while the menu system is in use.
+        this->dispText = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+        strncpy(this->dispText, dispText, 14);
+        this->dispText[14] = 0; // Truncate to 14 characters
+    }
+    selectionSymbol = "\x7E"; // -> Right-arrow indicates value selection or submenu
 }
 
 void BaseMenu::display(int row, bool select)
@@ -106,6 +131,7 @@ void BaseMenu::takeFocus()
     prevMenu = currentMenu;
     currentMenu = this;
 
+    Serial.print("Take focus: "); Serial.println(dispText);
     lcd->clear();
     lcd->setCursor(0, 0);
     lcd->print(dispText);
@@ -128,7 +154,6 @@ Menu::Menu(char *dispText, BaseMenu **subMenus, int numSubMenus) : BaseMenu(disp
 {
     this->subMenus = subMenus;
     this->numSubMenus = numSubMenus;
-    this->dispText = dispText;
     this->type = MENU_ITEM_TYPE::MENU;
     selectionSymbol = "\002"; // Down arrow indicates submenu
 }
@@ -236,15 +261,18 @@ void MenuBoolValue::displayValue()
 
 void MenuBoolValue::takeFocus()
 {
-    char outputText[17];
-    prevMenu = currentMenu;
-    currentMenu = this;
+    // char outputText[17];
+    // prevMenu = currentMenu;
+    // currentMenu = this;
 
-    lcd->clear();
-    lcd->setCursor(0, 0);
-    sprintf(outputText, "%-15s\001", dispText); // 1 is the return symbol
-    lcd->print(outputText);
-    displayValue();
+    // lcd->clear();
+    // lcd->setCursor(0, 0);
+    // sprintf(outputText, "%-15s\001", dispText); // 1 is the return symbol
+    // lcd->print(outputText);
+    // displayValue();
+    BaseMenu::takeFocus();
+    lcd->setCursor(15, 0);
+    lcd->print("\001"); // 1 is the return symbol
 }
 
 void MenuBoolValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
@@ -276,7 +304,7 @@ void MenuLongValue::displayValue()
     char outputText[17];
     if(lcd && value) {
         sprintf(valStr, "%ld %s", *value, units ? units : "");
-        sprintf(outputText, "%-14s \001", valStr); // 1 is the return symbol
+        sprintf(outputText, "%-15s\001", valStr); // 1 is the return symbol
         lcd->setCursor(0, 1);
         lcd->print(outputText);
     }
@@ -353,28 +381,52 @@ void MenuSmallFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
     }
 }
 
-MenuListValue::MenuListValue(char *dispText, char **list, int listSize, int *value) : BaseMenu(dispText)
+MenuDropDownListValue::MenuDropDownListValue(char *dispText, char **list, int listSize, int *value) : BaseMenu(dispText)
 {
     this->list = list;
     this->listSize = listSize;
     this->value = value;
-    this->type = MENU_ITEM_TYPE::LIST_VALUE;
+    this->type = MENU_ITEM_TYPE::DROP_DOWN_LIST_VALUE;
+
+    char temp[15];
+    for (int i = 0; i < listSize; i++) {
+        if(strlen(this->list[i]) > 14) {
+            // Try to AVOID using overly long strings as this will INCREASE RAM usage
+            // by creating multiple copies of the string in RAM.  These will NOT be freed
+            // until the menu system is destroyed (which is never in the current implementation).
+            // That's because menu objects need to be permanent (not constucted on the stack) so that
+            // they remain valid while the menu system is in use.
+            memcpy(temp, list[i], 14 * sizeof(char));
+            temp[14] = 0; // Truncate to 14 characters
+            this->list[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+            memcpy(this->list[i], temp, 15 * sizeof(char));
+        }
+        else
+            this->list[i] = list[i];
+    }
 }
 
-void MenuListValue::displayValue()
+void MenuDropDownListValue::displayValue()
 {
     char outputText[17];
     if(lcd && value && list && listSize > 0) {
         int index = *value;
         if (index < 0) index = 0;
         if (index >= listSize) index = listSize - 1;
-        sprintf(outputText, ">%-14s\001", list[index]);  // 1 is the return symbol
+        sprintf(outputText, ">%-15s", list[index]);
         lcd->setCursor(0, 1);
         lcd->print(outputText);
     }
 }
 
-void MenuListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void MenuDropDownListValue::takeFocus()
+{
+    BaseMenu::takeFocus();
+    lcd->setCursor(15, 0);
+    lcd->print("\001"); // 1 is the return symbol
+}
+
+void MenuDropDownListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
     if(event == ENCODER_EVENT::PRESSED) {
         // Exit menu
@@ -387,6 +439,98 @@ void MenuListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
                 *(this->value) = 0;
             else if (*(this->value) >= listSize)
                 *(this->value) = listSize - 1;
+            displayValue();
+        }
+    }
+}
+
+MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **list, int listSize, int *value) : BaseMenu(dispText)
+{
+    this->list = list;
+    this->listSize = listSize;
+    this->value = value;
+    this->type = MENU_ITEM_TYPE::ROTARY_LIST_VALUE;
+
+    char temp[15];
+    for (int i = 0; i < listSize; i++) {
+        if(strlen(this->list[i]) > 14) {
+            // Try to AVOID using overly long strings as this will INCREASE RAM usage
+            // by creating multiple copies of the string in RAM.  These will NOT be freed
+            // until the menu system is destroyed (which is never in the current implementation).
+            // That's because menu objects need to be permanent (not constucted on the stack) so that
+            // they remain valid while the menu system is in use.
+            memcpy(temp, list[i], 14 * sizeof(char));
+            temp[14] = 0; // Truncate to 14 characters
+            this->list[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+            memcpy(this->list[i], temp, 15 * sizeof(char));
+        }
+        else
+            this->list[i] = list[i];
+    }
+    selectionSymbol = "\003"; // @ Rotary symbol indicates rotary selection
+}
+
+void MenuRotaryListValue::display(int row, bool select)
+{
+    Serial.print("MenuRotaryListValue::display row="); Serial.print(row); Serial.print(" select="); Serial.println(select);
+    //if(lcd && dispText) {
+    if(lcd) {
+        // lcd->setCursor(0, row);
+        // if(select) lcd->print(">");
+        // else lcd->print(" ");
+        // lcd->print(dispText);
+        // int len = strlen(dispText);
+        // for(int i=len+1; i<dispWidth; i++) {
+        //     lcd->print(" ");
+        // }
+        displayValue();
+        if (select) {
+            lcd->setCursor(15, row);
+            lcd->print(selectionSymbol);  // -> Right-arrow indicates value selection or submenu
+        }
+    }    
+}
+
+
+void MenuRotaryListValue::displayValue()
+{
+    Serial.println("MenuRotaryListValue::displayValue");
+    char outputText[17];
+    if(lcd && value && list && listSize > 0) {
+        if (*value < 0) *value = 0;
+        if (*value >= listSize) *value = listSize - 1;
+        sprintf(outputText, ">%-14s%s", list[*value], selectionSymbol);
+        lcd->setCursor(0, 1);
+        lcd->print(outputText);
+    }
+}
+
+void MenuRotaryListValue::takeFocus()
+{
+    Serial.println("MenuRotaryListValue::takeFocus");
+
+
+    prevMenu = currentMenu;
+    currentMenu = this;
+
+    displayValue();
+    lcd->setCursor(15, 1);
+    lcd->print(selectionSymbol); // @ Rotary symbol indicates rotary selection
+}
+
+void MenuRotaryListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+{
+    if(event == ENCODER_EVENT::TURNED) {
+        // Exit menu
+        Serial.println("MenuRotaryListValue::inputHandler TURNED - returnFocus");
+        returnFocus();
+    } else if(event == ENCODER_EVENT::PRESSED) {
+        Serial.println("MenuRotaryListValue::inputHandler PRESSED - change value");
+        // Change value
+        if(this->value && list && listSize > 0) {
+            *(this->value) += 1;
+            if (*(this->value) >= listSize)
+                *(this->value) = 0;
             displayValue();
         }
     }
