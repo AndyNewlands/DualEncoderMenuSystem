@@ -53,6 +53,16 @@ byte sparkSymbol[] = {
     0b01000,
     0b10000}; // Custom character for action/function type indicator
 
+byte settingsSymbol[] = {
+    0b01010,
+    0b11111,
+    0b10101,
+    0b00000,
+    0b01010,
+    0b11111,
+    0b10101,
+    0b00000}; // Custom character for action/function type indicator
+
 void BaseMenu::encoderAturned(long value)
 {
     Serial.println("Encoder A turned");
@@ -102,6 +112,7 @@ void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *disp
     lcd->createChar(2, enterSymbol);
     lcd->createChar(3, rotateSymbol);
     lcd->createChar(4, sparkSymbol);
+    lcd->createChar(5, settingsSymbol);
     lcd->setCursor(0, 0);
 
     initialised = true;
@@ -126,7 +137,7 @@ BaseMenu::BaseMenu(char *dispText)
         strncpy(this->dispText, dispText, 14);
         this->dispText[14] = 0; // Truncate to 14 characters
     }
-    typeIndicatorChar = 0x7E; // -> Right-arrow indicates value selection or submenu
+    //typeIndicatorChar = 0x7E; // -> Right-arrow indicates value selection or submenu
 }
 
 void BaseMenu::display(int row, bool select)
@@ -166,10 +177,11 @@ void BaseMenu::retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCOD
     displayValue();
 }
 
-Menu::Menu(char *dispText, BaseMenu **subMenus, int numSubMenus) : BaseMenu(dispText)
+Menu::Menu(char *dispText, BaseMenu **menuItems) : BaseMenu(dispText)
 {
-    this->subMenus = subMenus;
-    this->numSubMenus = numSubMenus;
+    this->menuItems = menuItems;
+    for (itemCount = 0; this->menuItems[itemCount] != nullptr; itemCount++)
+        ;
     this->type = MENU_ITEM_TYPE::MENU;
     typeIndicatorChar = '\002'; // Down arrow indicates submenu
 }
@@ -209,7 +221,7 @@ void Menu::displayValue()
         break;
     }
     for (i = startIndex; i <= maxIndex; i++)
-        subMenus[i]->display(row++, i == selectedIndex);
+        menuItems[i]->display(row++, i == selectedIndex);
 }
 
 void Menu::takeFocus()
@@ -233,15 +245,15 @@ void Menu::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned lon
     if (event == ENCODER_EVENT::PRESSED)
     {
         // Select submenu
-        if (selectedIndex >= 0 && selectedIndex < numSubMenus)
-            subMenus[selectedIndex]->takeFocus();
+        if (selectedIndex >= 0 && selectedIndex < itemCount)
+            menuItems[selectedIndex]->takeFocus();
         else if (selectedIndex == -1)
             returnFocus(source, event, value);
     }
     else if (event == ENCODER_EVENT::TURNED)
     {
         // Change selected index
-        if (subMenus && numSubMenus > 0)
+        if (menuItems && itemCount > 0)
         {
             selectedIndex += value == 1 ? 1 : -1;
             if (prevMenu)
@@ -254,8 +266,8 @@ void Menu::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned lon
                 if (selectedIndex < 0)
                     selectedIndex = 0;
             }
-            if (selectedIndex >= numSubMenus)
-                selectedIndex = numSubMenus - 1;
+            if (selectedIndex >= itemCount)
+                selectedIndex = itemCount - 1;
             // Display menu with new selection
             displayValue();
         }
@@ -430,30 +442,31 @@ void MenuSmallFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
     }
 }
 
-MenuDropDownListValue::MenuDropDownListValue(char *dispText, char **list, int listSize, int *value) : BaseMenu(dispText)
+MenuDropDownListValue::MenuDropDownListValue(char *dispText, char **listItems, int *value) : BaseMenu(dispText)
 {
-    this->list = list;
-    this->listSize = listSize;
+    this->listItems = listItems;
+    for (itemCount = 0; listItems[itemCount] != nullptr; itemCount++)
+        ;
     this->value = value;
     this->type = MENU_ITEM_TYPE::DROP_DOWN_LIST_VALUE;
 
     char temp[15];
-    for (int i = 0; i < listSize; i++)
+    for (int i = 0; i < itemCount; i++)
     {
-        if (strlen(this->list[i]) > 14)
+        if (strlen(this->listItems[i]) > 14)
         {
             // Try to AVOID using overly long strings as this will INCREASE RAM usage
             // by creating multiple copies of the string in RAM.  These will NOT be freed
             // until the menu system is destroyed (which is never in the current implementation).
             // That's because menu objects need to be permanent (not constucted on the stack) so that
             // they remain valid while the menu system is in use.
-            memcpy(temp, list[i], 14 * sizeof(char));
+            memcpy(temp, listItems[i], 14 * sizeof(char));
             temp[14] = 0;                                      // Truncate to 14 characters
-            this->list[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
-            memcpy(this->list[i], temp, 15 * sizeof(char));
+            this->listItems[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+            memcpy(this->listItems[i], temp, 15 * sizeof(char));
         }
         else
-            this->list[i] = list[i];
+            this->listItems[i] = listItems[i];
     }
 }
 
@@ -463,9 +476,9 @@ void MenuDropDownListValue::displayValue()
     int index = *value;
     if (index < 0)
         index = 0;
-    if (index >= listSize)
-        index = listSize - 1;
-    sprintf(outputText, "%c%-15s", selectionChar, list[index]);
+    if (index >= itemCount)
+        index = itemCount - 1;
+    sprintf(outputText, "%c%-15s", selectionChar, listItems[index]);
     lcd->setCursor(0, 1);
     lcd->print(outputText);
 }
@@ -487,42 +500,43 @@ void MenuDropDownListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT ev
     else if (event == ENCODER_EVENT::TURNED)
     {
         // Change value
-        if (this->value && list && listSize > 0)
+        if (this->value && listItems && itemCount > 0)
         {
             *(this->value) += value == 1 ? 1 : -1;
             if (*(this->value) < 0)
                 *(this->value) = 0;
-            else if (*(this->value) >= listSize)
-                *(this->value) = listSize - 1;
+            else if (*(this->value) >= itemCount)
+                *(this->value) = itemCount - 1;
             displayValue();
         }
     }
 }
 
-MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **list, int listSize, int *value) : BaseMenu(dispText)
+MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **listItems, int *value) : BaseMenu(dispText)
 {
-    this->list = list;
-    this->listSize = listSize;
+    this->listItems = listItems;
+    for (itemCount = 0; this->listItems[itemCount] != nullptr; itemCount++)
+        ;
     this->value = value;
     this->type = MENU_ITEM_TYPE::ROTARY_LIST_VALUE;
 
     char temp[15];
-    for (int i = 0; i < listSize; i++)
+    for (int i = 0; i < itemCount; i++)
     {
-        if (strlen(this->list[i]) > 14)
+        if (strlen(this->listItems[i]) > 14)
         {
             // Try to AVOID using overly long strings as this will INCREASE RAM usage
             // by creating multiple copies of the string in RAM.  These will NOT be freed
             // until the menu system is destroyed (which is never in the current implementation).
             // That's because menu objects need to be permanent (not constucted on the stack) so that
             // they remain valid while the menu system is in use.
-            memcpy(temp, list[i], 14 * sizeof(char));
+            memcpy(temp, listItems[i], 14 * sizeof(char));
             temp[14] = 0;                                      // Truncate to 14 characters
-            this->list[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
-            memcpy(this->list[i], temp, 15 * sizeof(char));
+            this->listItems[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+            memcpy(this->listItems[i], temp, 15 * sizeof(char));
         }
         else
-            this->list[i] = list[i];
+            this->listItems[i] = listItems[i];
     }
     typeIndicatorChar = '\003'; // @ Rotary symbol indicates rotary selection
 }
@@ -544,9 +558,9 @@ void MenuRotaryListValue::displayValue()
     char outputText[17];
     if (*value < 0)
         *value = 0;
-    if (*value >= listSize)
-        *value = listSize - 1;
-    sprintf(outputText, "%c%-14s%c", selected ? '>' : ' ', list[*value], selected ? typeIndicatorChar : ' ');
+    if (*value >= itemCount)
+        *value = itemCount - 1;
+    sprintf(outputText, "%c%-14s%c", selected ? '>' : ' ', listItems[*value], selected ? typeIndicatorChar : ' ');
     lcd->setCursor(0, this->row);
     lcd->print(outputText);
 }
@@ -569,10 +583,10 @@ void MenuRotaryListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
     else if (event == ENCODER_EVENT::PRESSED)
     {
         // Change value
-        if (this->value && list && listSize > 0)
+        if (this->value && listItems && itemCount > 0)
         {
             *(this->value) += 1;
-            if (*(this->value) >= listSize)
+            if (*(this->value) >= itemCount)
                 *(this->value) = 0;
             displayValue();
         }

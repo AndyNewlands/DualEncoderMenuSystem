@@ -42,7 +42,8 @@ protected:
     static bool initialised;
 
     BaseMenu *prevMenu = nullptr;
-    char typeIndicatorChar = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
+    // char typeIndicatorChar = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
+    char typeIndicatorChar = 0x3D; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
 
 public:
     char *dispText = nullptr;
@@ -65,12 +66,12 @@ public:
 class Menu : public BaseMenu
 {
 protected:
-    BaseMenu **subMenus = nullptr;
-    int numSubMenus = 0;
+    BaseMenu **menuItems = nullptr;
+    int itemCount = 0;
     int selectedIndex = -1;
 
 public:
-    Menu(char *dispText, BaseMenu **subMenus, int numSubMenus);
+    Menu(char *dispText, BaseMenu **menuItems);
     void displayValue() override;
     void takeFocus() override;
     void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
@@ -123,11 +124,11 @@ class MenuDropDownListValue : public BaseMenu
 {
 protected:
     int *value = nullptr;
-    char **list = nullptr;
-    int listSize = 0;
+    char **listItems = nullptr;
+    int itemCount = 0;
 
 public:
-    MenuDropDownListValue(char *dispText, char **list, int listSize, int *value);
+    MenuDropDownListValue(char *dispText, char **listItems, int *value);
     void displayValue() override;
     void takeFocus() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
@@ -139,11 +140,11 @@ protected:
     int row = 0;
     bool selected = false;
     int *value = nullptr;
-    char **list = nullptr;
-    int listSize = 0;
+    char **listItems = nullptr;
+    int itemCount = 0;
 
 public:
-    MenuRotaryListValue(char *dispText, char **list, int listSize, int *value);
+    MenuRotaryListValue(char *dispText, char **listItems, int *value);
     void display(int row, bool select) override;
     void displayValue() override;
     void takeFocus() override;
