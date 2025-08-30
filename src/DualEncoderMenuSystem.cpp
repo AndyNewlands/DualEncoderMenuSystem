@@ -11,6 +11,7 @@ bool BaseMenu::initialised = false;
 BaseMenu *currentMenu = nullptr;
 
 char *naStr = (char *)"N/A";
+char selectionChar = '>';
 
 byte returnSymbol[] = {
     0b00100,
@@ -41,6 +42,16 @@ byte rotateSymbol[] = {
     0b11101,
     0b00001,
     0b11111}; // Custom character for rotary list type indicator
+
+byte sparkSymbol[] = {
+    0b00001,
+    0b00010,
+    0b00100,
+    0b01111,
+    0b11110,
+    0b00100,
+    0b01000,
+    0b10000}; // Custom character for action/function type indicator
 
 void BaseMenu::encoderAturned(long value)
 {
@@ -90,7 +101,7 @@ void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *disp
     lcd->createChar(1, returnSymbol);
     lcd->createChar(2, enterSymbol);
     lcd->createChar(3, rotateSymbol);
-    lcd->clear();
+    lcd->createChar(4, sparkSymbol);
     lcd->setCursor(0, 0);
 
     initialised = true;
@@ -115,30 +126,15 @@ BaseMenu::BaseMenu(char *dispText)
         strncpy(this->dispText, dispText, 14);
         this->dispText[14] = 0; // Truncate to 14 characters
     }
-    typeIndicator = "\x7E"; // -> Right-arrow indicates value selection or submenu
+    typeIndicatorChar = 0x7E; // -> Right-arrow indicates value selection or submenu
 }
 
 void BaseMenu::display(int row, bool select)
 {
-    if (lcd && dispText)
-    {
-        lcd->setCursor(0, row);
-        if (select)
-            lcd->print(">");
-        else
-            lcd->print(" ");
-        lcd->print(dispText);
-        int len = strlen(dispText);
-        for (int i = len + 1; i < dispWidth; i++)
-        {
-            lcd->print(" ");
-        }
-        if (select)
-        {
-            lcd->setCursor(15, row);
-            lcd->print(typeIndicator); // -> Right-arrow indicates value selection or submenu
-        }
-    }
+    char outputText[17];
+    sprintf(outputText, "%c%-14s%c", select ? '>' : ' ', dispText, select ? typeIndicatorChar : ' ');
+    lcd->setCursor(0, row);
+    lcd->print(outputText);
 }
 
 void BaseMenu::displayValue()
@@ -175,7 +171,7 @@ Menu::Menu(char *dispText, BaseMenu **subMenus, int numSubMenus) : BaseMenu(disp
     this->subMenus = subMenus;
     this->numSubMenus = numSubMenus;
     this->type = MENU_ITEM_TYPE::MENU;
-    typeIndicator = "\002"; // Down arrow indicates submenu
+    typeIndicatorChar = '\002'; // Down arrow indicates submenu
 }
 
 void Menu::displayValue()
@@ -191,7 +187,7 @@ void Menu::displayValue()
         startIndex = 0;
         maxIndex = 0;
         if (prevMenu)
-            sprintf(outputText, ">%-14s\001", prevMenu->dispText);
+            sprintf(outputText, "%c%-14s%c", selectionChar, prevMenu->dispText, typeIndicatorChar);
         else
             sprintf(outputText, "%-16s", dispText);
         lcd->setCursor(0, row++);
@@ -469,7 +465,7 @@ void MenuDropDownListValue::displayValue()
         index = 0;
     if (index >= listSize)
         index = listSize - 1;
-    sprintf(outputText, ">%-15s", list[index]);
+    sprintf(outputText, "%c%-15s", selectionChar, list[index]);
     lcd->setCursor(0, 1);
     lcd->print(outputText);
 }
@@ -528,17 +524,19 @@ MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **list, int listSi
         else
             this->list[i] = list[i];
     }
-    typeIndicator = "\003"; // @ Rotary symbol indicates rotary selection
+    typeIndicatorChar = '\003'; // @ Rotary symbol indicates rotary selection
 }
 
 void MenuRotaryListValue::display(int row, bool select)
 {
+    this->row = row;
+    this->selected = select;
     displayValue();
-    if (select)
-    {
-        lcd->setCursor(15, row);
-        lcd->print(typeIndicator); // -> Right-arrow indicates value selection or submenu
-    }
+    // if (select)
+    // {
+    //     lcd->setCursor(15, row);
+    //     lcd->print(typeIndicatorCharStr); // -> Right-arrow indicates value selection or submenu
+    // }
 }
 
 void MenuRotaryListValue::displayValue()
@@ -548,8 +546,8 @@ void MenuRotaryListValue::displayValue()
         *value = 0;
     if (*value >= listSize)
         *value = listSize - 1;
-    sprintf(outputText, ">%-14s%s", list[*value], typeIndicator);
-    lcd->setCursor(0, 1);
+    sprintf(outputText, "%c%-14s%c", selected ? '>' : ' ', list[*value], selected ? typeIndicatorChar : ' ');
+    lcd->setCursor(0, this->row);
     lcd->print(outputText);
 }
 
@@ -589,7 +587,7 @@ MenuAction::MenuAction(char *dispText, action_function_t function, input_handler
     this->function = function;
     this->inputHandlerFunction = inputHandlerFunction;
     this->type = MENU_ITEM_TYPE::FUNCTION;
-    typeIndicator = "\002"; // Down arrow indicates submenu
+    typeIndicatorChar = '\004'; // Down arrow indicates submenu
 }
 
 void MenuAction::takeFocus()

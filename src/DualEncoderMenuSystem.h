@@ -42,7 +42,7 @@ protected:
     static bool initialised;
 
     BaseMenu *prevMenu = nullptr;
-    char *typeIndicator = "\x7E"; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
+    char typeIndicatorChar = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
 
 public:
     char *dispText = nullptr;
@@ -136,6 +136,8 @@ public:
 class MenuRotaryListValue : public BaseMenu
 {
 protected:
+    int row = 0;
+    bool selected = false;
     int *value = nullptr;
     char **list = nullptr;
     int listSize = 0;
