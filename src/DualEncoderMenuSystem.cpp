@@ -34,14 +34,14 @@ byte enterSymbol[] = {
     0b00100}; // Custom character for enter type indicator
 
 byte rotateSymbol[] = {
+    0b00100,
+    0b00010,
     0b11111,
-    0b10001,
-    0b10101,
-    0b10101,
-    0b10101,
-    0b11101,
-    0b00001,
-    0b11111}; // Custom character for rotary list type indicator
+    0b00000,
+    0b11111,
+    0b01000,
+    0b00100,
+    0b00000}; // Custom character for rotary list type indicator
 
 byte sparkSymbol[] = {
     0b00001,
@@ -107,14 +107,14 @@ void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *disp
     initialised = true;
 }
 
-BaseMenu::BaseMenu(char *dispText)
+BaseMenu::BaseMenu(const char *dispText)
 {
     this->type = MENU_ITEM_TYPE::NONE;
     if (!dispText || ! strlen(dispText))
-        dispText = naStr;
+        dispText = (char *)naStr;
 
     if (strlen(dispText) <= 14)
-        this->dispText = dispText;
+        this->dispText =(char *) dispText;
     else
     {
         // Try to AVOID using overly long strings as this will INCREASE RAM usage
@@ -122,17 +122,16 @@ BaseMenu::BaseMenu(char *dispText)
         // until the menu system is destroyed (which is never in the current implementation).
         // That's because menu objects need to be permanent (not constucted on the stack) so that
         // they remain valid while the menu system is in use.
-        this->dispText = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+        this->dispText = (char *)malloc(15 * sizeof(char));
         strncpy(this->dispText, dispText, 14);
-        this->dispText[14] = 0; // Truncate to 14 characters
+        this->dispText[14] = 0;
     }
-    //typeIndicatorChar = 0x7E; // -> Right-arrow indicates value selection or submenu
 }
 
 void BaseMenu::display(int row, bool select)
 {
     char outputText[17];
-    sprintf(outputText, "%c%-14s%c", select ? '>' : ' ', dispText, select ? typeIndicatorChar : ' ');
+    sprintf(outputText, "%c%-14s%c", select ? '>' : ' ', dispText, select ? typeIndicator : ' ');
     lcd->setCursor(0, row);
     lcd->print(outputText);
 }
@@ -166,13 +165,13 @@ void BaseMenu::retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCOD
     displayValue();
 }
 
-Menu::Menu(char *dispText, BaseMenu **menuItems) : BaseMenu(dispText)
+Menu::Menu(const char *dispText, BaseMenu **menuItems) : BaseMenu(dispText)
 {
     this->menuItems = menuItems;
     for (itemCount = 0; this->menuItems[itemCount] != nullptr; itemCount++)
         ;
     this->type = MENU_ITEM_TYPE::MENU;
-    typeIndicatorChar = '\002'; // Down arrow indicates submenu
+    typeIndicator = '\002'; // Down arrow indicates submenu
 }
 
 void Menu::displayValue()
@@ -264,16 +263,16 @@ void Menu::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned lon
     }
 }
 
-MenuBoolValue::MenuBoolValue(char *dispText, char *falseOption, char *trueOption, bool *value) : BaseMenu(dispText)
+MenuBoolValue::MenuBoolValue(const char *dispText, const char *falseOption, const char *trueOption, bool *value) : BaseMenu(dispText)
 {
     if (!falseOption || !strlen(falseOption))
-        falseOption = naStr;
+        falseOption = (char *)naStr;
     else
-        this->falseOption = falseOption;
+        this->falseOption = (char *)falseOption;
     if (!trueOption || !strlen(trueOption))
-        trueOption = naStr;
+        trueOption = (char *)naStr;
     else
-        this->trueOption = trueOption;
+        this->trueOption = (char *)trueOption;
     this->value = value;
     this->type = MENU_ITEM_TYPE::BOOL_VALUE;
 }
@@ -324,12 +323,12 @@ void MenuBoolValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuLongValue::MenuLongValue(char *dispText, char *units, long minValue, long maxValue, long *value) : BaseMenu(dispText)
+MenuLongValue::MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long *value) : BaseMenu(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
     if (units)
-        this->units = units;
+        this->units = (char *)units;
     else
         this->units = (char *)"";
     this->value = value;
@@ -381,11 +380,11 @@ void MenuLongValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuSmallFloatValue::MenuSmallFloatValue(char *dispText, char *units, float minValue, float maxValue, float *value) : BaseMenu(dispText)
+MenuSmallFloatValue::MenuSmallFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float *value) : BaseMenu(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
-    this->units = units;
+    this->units = (char *)units;
     this->value = value;
     this->type = MENU_ITEM_TYPE::SMALL_FLOAT_VALUE;
 }
@@ -432,9 +431,9 @@ void MenuSmallFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
     }
 }
 
-MenuDropDownListValue::MenuDropDownListValue(char *dispText, char **listItems, int *value) : BaseMenu(dispText)
+MenuDropDownListValue::MenuDropDownListValue(const char *dispText, const char **listItems, int *value) : BaseMenu(dispText)
 {
-    this->listItems = listItems;
+    this->listItems = (char **)listItems;
     for (itemCount = 0; listItems[itemCount] != nullptr; itemCount++)
         ;
     this->value = value;
@@ -456,7 +455,7 @@ MenuDropDownListValue::MenuDropDownListValue(char *dispText, char **listItems, i
             memcpy(this->listItems[i], temp, 15 * sizeof(char));
         }
         else
-            this->listItems[i] = listItems[i];
+            this->listItems[i] = (char *)listItems[i];
     }
 }
 
@@ -502,9 +501,9 @@ void MenuDropDownListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT ev
     }
 }
 
-MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **listItems, int *value) : BaseMenu(dispText)
+MenuRotaryListValue::MenuRotaryListValue(const char *dispText, const char **listItems, int *value) : BaseMenu(dispText)
 {
-    this->listItems = listItems;
+    this->listItems = (char **)listItems;
     for (itemCount = 0; this->listItems[itemCount] != nullptr; itemCount++)
         ;
     this->value = value;
@@ -521,14 +520,14 @@ MenuRotaryListValue::MenuRotaryListValue(char *dispText, char **listItems, int *
             // That's because menu objects need to be permanent (not constucted on the stack) so that
             // they remain valid while the menu system is in use.
             memcpy(temp, listItems[i], 14 * sizeof(char));
-            temp[14] = 0;                                      // Truncate to 14 characters
-            this->listItems[i] = (char *)malloc(15 * sizeof(char)); // Allocate 15 bytes (14 chars + null terminator)
+            temp[14] = 0;
+            this->listItems[i] = (char *)malloc(15 * sizeof(char));
             memcpy(this->listItems[i], temp, 15 * sizeof(char));
         }
         else
-            this->listItems[i] = listItems[i];
+            this->listItems[i] = (char *)listItems[i];
     }
-    typeIndicatorChar = '\003'; // @ Rotary symbol indicates rotary selection
+    typeIndicator = '\003'; // Rotary symbol indicates rotary selection
 }
 
 void MenuRotaryListValue::display(int row, bool select)
@@ -536,11 +535,6 @@ void MenuRotaryListValue::display(int row, bool select)
     this->row = row;
     this->selected = select;
     displayValue();
-    // if (select)
-    // {
-    //     lcd->setCursor(15, row);
-    //     lcd->print(typeIndicatorCharStr); // -> Right-arrow indicates value selection or submenu
-    // }
 }
 
 void MenuRotaryListValue::displayValue()
@@ -550,7 +544,7 @@ void MenuRotaryListValue::displayValue()
         *value = 0;
     if (*value >= itemCount)
         *value = itemCount - 1;
-    sprintf(outputText, "%c%-14s%c", selected ? '>' : ' ', listItems[*value], selected ? typeIndicatorChar : ' ');
+    sprintf(outputText, "%c%-14s%c", selected ? '>' : ' ', listItems[*value], selected ? typeIndicator : ' ');
     lcd->setCursor(0, this->row);
     lcd->print(outputText);
 }
@@ -585,13 +579,13 @@ void MenuRotaryListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
 
 typedef void (*action_function_t)(BaseMenu *, ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
 typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
-MenuAction::MenuAction(char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction) : BaseMenu(dispText)
+MenuAction::MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction) : BaseMenu(dispText)
 {
-    this->dispText = dispText;
+    this->dispText = (char *)dispText;
     this->function = function;
     this->inputHandlerFunction = inputHandlerFunction;
     this->type = MENU_ITEM_TYPE::FUNCTION;
-    typeIndicatorChar = '\004'; // Down arrow indicates submenu
+    typeIndicator = '\004';
 }
 
 void MenuAction::takeFocus()

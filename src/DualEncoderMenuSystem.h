@@ -42,8 +42,7 @@ protected:
     static bool initialised;
 
     BaseMenu *prevMenu = nullptr;
-    // char typeIndicatorChar = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
-    char typeIndicatorChar = 0x3D; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow (\x7E ->) = edit value)
+    char typeIndicator = 0x3D; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, euqals sign (=>) = edit value)
 
 public:
     char *dispText = nullptr;
@@ -54,7 +53,7 @@ public:
     static void encoderBpressed(unsigned long value);
     static void init(int dispWidth, int dispHeight, LiquidCrystal_I2C *lcd, RotaryEncoder *encoderA, RotaryEncoder *encoderB);
 
-    BaseMenu(char *dispText);
+    BaseMenu(const char *dispText);
     virtual void display(int row, bool select);
     virtual void displayValue();
     virtual void takeFocus();
@@ -71,7 +70,7 @@ protected:
     int selectedIndex = -1;
 
 public:
-    Menu(char *dispText, BaseMenu **menuItems);
+    Menu(const char *dispText, BaseMenu **menuItems);
     void displayValue() override;
     void takeFocus() override;
     void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
@@ -86,7 +85,7 @@ protected:
     bool *value = nullptr;
 
 public:
-    MenuBoolValue(char *dispText, char *falseOption, char *trueOption, bool *value);
+    MenuBoolValue(const char *dispText, const char *falseOption, const char *trueOption, bool *value);
     void displayValue() override;
     void takeFocus() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
@@ -101,7 +100,7 @@ protected:
     long maxValue = 0;
 
 public:
-    MenuLongValue(char *dispText, char *units, long minValue, long maxValue, long *value);
+    MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long *value);
     void displayValue() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
@@ -115,7 +114,7 @@ protected:
     float maxValue = 0.0;
 
 public:
-    MenuSmallFloatValue(char *dispText, char *units, float minValue, float maxValue, float *value);
+    MenuSmallFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float *value);
     void displayValue() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
@@ -128,7 +127,7 @@ protected:
     int itemCount = 0;
 
 public:
-    MenuDropDownListValue(char *dispText, char **listItems, int *value);
+    MenuDropDownListValue(const char *dispText, const char **listItems, int *value);
     void displayValue() override;
     void takeFocus() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
@@ -144,7 +143,7 @@ protected:
     int itemCount = 0;
 
 public:
-    MenuRotaryListValue(char *dispText, char **listItems, int *value);
+    MenuRotaryListValue(const char *dispText, const char **listItems, int *value);
     void display(int row, bool select) override;
     void displayValue() override;
     void takeFocus() override;
@@ -161,7 +160,7 @@ protected:
     input_handler_function_t inputHandlerFunction = nullptr;
 
 public:
-    MenuAction(char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction);
+    MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction);
     void takeFocus() override;
     void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
