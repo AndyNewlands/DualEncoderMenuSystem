@@ -53,16 +53,6 @@ byte sparkSymbol[] = {
     0b01000,
     0b10000}; // Custom character for action/function type indicator
 
-byte settingsSymbol[] = {
-    0b01010,
-    0b11111,
-    0b10101,
-    0b00000,
-    0b01010,
-    0b11111,
-    0b10101,
-    0b00000}; // Custom character for action/function type indicator
-
 void BaseMenu::encoderAturned(long value)
 {
     Serial.println("Encoder A turned");
@@ -112,7 +102,6 @@ void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *disp
     lcd->createChar(2, enterSymbol);
     lcd->createChar(3, rotateSymbol);
     lcd->createChar(4, sparkSymbol);
-    lcd->createChar(5, settingsSymbol);
     lcd->setCursor(0, 0);
 
     initialised = true;
@@ -199,7 +188,7 @@ void Menu::displayValue()
         startIndex = 0;
         maxIndex = 0;
         if (prevMenu)
-            sprintf(outputText, "%c%-14s%c", selectionChar, prevMenu->dispText, typeIndicatorChar);
+            sprintf(outputText, "%c%-14s\001", selectionChar, prevMenu->dispText);
         else
             sprintf(outputText, "%-16s", dispText);
         lcd->setCursor(0, row++);
@@ -228,6 +217,7 @@ void Menu::takeFocus()
 {
     prevMenu = currentMenu;
     currentMenu = this;
+    selectedIndex = 0;
     lcd->clear();
     lcd->setCursor(0, 0);
     displayValue();
