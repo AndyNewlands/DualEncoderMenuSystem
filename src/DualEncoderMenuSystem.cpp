@@ -55,28 +55,24 @@ byte sparkSymbol[] = {
 
 void BaseMenu::encoderAturned(long value)
 {
-    Serial.println("Encoder A turned");
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::A, ENCODER_EVENT::TURNED, value);
 }
 
 void BaseMenu::encoderApressed(unsigned long value)
 {
-    Serial.println("Encoder A pressed");
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::A, ENCODER_EVENT::PRESSED, value);
 }
 
 void BaseMenu::encoderBturned(long value)
 {
-    Serial.println("Encoder B turned");
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::B, ENCODER_EVENT::TURNED, value);
 }
 
 void BaseMenu::encoderBpressed(unsigned long value)
 {
-    Serial.println("Encoder B pressed");
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::B, ENCODER_EVENT::PRESSED, value);
 }
@@ -123,7 +119,7 @@ BaseMenu::BaseMenu(const char *dispText)
         // That's because menu objects need to be permanent (not constucted on the stack) so that
         // they remain valid while the menu system is in use.
         this->dispText = (char *)malloc(15 * sizeof(char));
-        strncpy(this->dispText, dispText, 14);
+        memcpy(this->dispText, dispText, 14 * sizeof(char));
         this->dispText[14] = 0;
     }
 }
@@ -263,16 +259,41 @@ void Menu::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned lon
     }
 }
 
-MenuBoolValue::MenuBoolValue(const char *dispText, const char *falseOption, const char *trueOption, bool *value) : BaseMenu(dispText)
+MenuBoolValue::MenuBoolValue(const char *dispText, const char *trueOption, const char *falseOption, bool *value) : BaseMenu(dispText)
 {
     if (!falseOption || !strlen(falseOption))
         falseOption = (char *)naStr;
-    else
-        this->falseOption = (char *)falseOption;
     if (!trueOption || !strlen(trueOption))
         trueOption = (char *)naStr;
+
+        if (strlen(trueOption) <= 7)
+        this->trueOption =(char *) trueOption;
     else
-        this->trueOption = (char *)trueOption;
+    {
+        // Try to AVOID using overly long strings as this will INCREASE RAM usage
+        // by creating multiple copies of the string in RAM.  These will NOT be freed
+        // until the menu system is destroyed (which is never in the current implementation).
+        // That's because menu objects need to be permanent (not constucted on the stack) so that
+        // they remain valid while the menu system is in use.
+        this->trueOption = (char *)malloc(8 * sizeof(char));
+        memcpy(this->trueOption, trueOption, 7 * sizeof(char));
+        this->trueOption[7] = 0;
+    }
+
+    if (strlen(falseOption) <= 7)
+        this->falseOption =(char *) falseOption;
+    else
+    {
+        // Try to AVOID using overly long strings as this will INCREASE RAM usage
+        // by creating multiple copies of the string in RAM.  These will NOT be freed
+        // until the menu system is destroyed (which is never in the current implementation).
+        // That's because menu objects need to be permanent (not constucted on the stack) so that
+        // they remain valid while the menu system is in use.
+        this->falseOption = (char *)malloc(8 * sizeof(char));
+        memcpy(this->falseOption, falseOption, 7 * sizeof(char));
+        this->falseOption[7] = 0;
+    }
+
     this->value = value;
     this->type = MENU_ITEM_TYPE::BOOL_VALUE;
 }
@@ -281,18 +302,20 @@ void MenuBoolValue::displayValue()
 {
     char fmt[17];
     char trueText[17];
+    char falseText[17];
     char outputText[17];
-    int lenFalse;
+    int lenTrueText;;
 
     if (lcd && value)
     {
         lcd->setCursor(15, 0);
         lcd->print("\001"); // 1 is the return symbol
         // Display options with current value indicated by '>'
-        sprintf(trueText, "%c%s", *value == 1 ? '>' : ' ', trueOption);
-        lenFalse = strlen(falseOption) + 2;
-        sprintf(fmt, "%c%s %%%ds", *value == 0 ? '>' : ' ', falseOption, 16 - lenFalse);
-        sprintf(outputText, fmt, trueText);
+        sprintf(trueText, "%c%s", *value == true ? '>' : ' ', trueOption);
+        sprintf(falseText, "%c%s", *value == false ? '>' : ' ', falseOption);
+        lenTrueText = strlen(trueText);
+        sprintf(fmt, "%s%%%ds", trueText, 16 - lenTrueText);
+        sprintf(outputText, fmt, falseText);
         lcd->setCursor(0, 1);
         lcd->print(outputText);
     }
@@ -315,11 +338,8 @@ void MenuBoolValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     else if (event == ENCODER_EVENT::TURNED)
     {
         // Change value
-        if (this->value)
-        {
-            *(this->value) = value == 1;
-            displayValue();
-        }
+        *(this->value) = *(this->value) ? false : true;
+        displayValue();
     }
 }
 
@@ -383,16 +403,18 @@ void MenuLongValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuSmallFloatValue::MenuSmallFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float *value) : BaseMenu(dispText)
+MenuFloatValue::MenuFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float coarseStep, float fineStep, float *value) : BaseMenu(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
+    this->coarseStep = coarseStep > 0 ? coarseStep : 0.1;
+    this->fineStep = fineStep > 0 ? fineStep : 0.001;
     this->units = (char *)units;
     this->value = value;
     this->type = MENU_ITEM_TYPE::SMALL_FLOAT_VALUE;
 }
 
-void MenuSmallFloatValue::displayValue()
+void MenuFloatValue::displayValue()
 {
     char valStr[17];
     char outputText[17];
@@ -402,7 +424,7 @@ void MenuSmallFloatValue::displayValue()
     lcd->print(outputText);
 }
 
-void MenuSmallFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void MenuFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
     if (event == ENCODER_EVENT::PRESSED)
     {
@@ -584,7 +606,6 @@ typedef void (*action_function_t)(BaseMenu *, ENCODER_SOURCE, ENCODER_EVENT, uns
 typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
 MenuAction::MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction) : BaseMenu(dispText)
 {
-    this->dispText = (char *)dispText;
     this->function = function;
     this->inputHandlerFunction = inputHandlerFunction;
     this->type = MENU_ITEM_TYPE::FUNCTION;

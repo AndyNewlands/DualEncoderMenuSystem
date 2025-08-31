@@ -42,7 +42,7 @@ protected:
     static bool initialised;
 
     BaseMenu *prevMenu = nullptr;
-    char typeIndicator = 0x3D; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, euqals sign (=>) = edit value)
+    char typeIndicator = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow  (->) = edit value)
 
 public:
     char *dispText = nullptr;
@@ -107,16 +107,18 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuSmallFloatValue : public BaseMenu
+class MenuFloatValue : public BaseMenu
 {
 protected:
     char *units = nullptr;
     float *value = nullptr;
     float minValue = 0.0;
     float maxValue = 0.0;
+    float coarseStep = 0.01;
+    float fineStep = 0.001;
 
 public:
-    MenuSmallFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float *value);
+    MenuFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float coarseStep, float fineStep, float *value);
     void displayValue() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };

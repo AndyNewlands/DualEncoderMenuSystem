@@ -43,24 +43,30 @@ LiquidCrystal_I2C lcd(0x27,20,2);  // set the lcd address to 0x27 for a 16 chars
         |--Volume            // MenuLongValue
 */
 
-bool enable = False;
+bool direction = false;
 long speed = 1000;
-float width = 1.00
+float width = 1.00;
 int operationMode = 0;
 int colour = 0;
 
 int brightness = 3;
 long volume = 50;
 
-MenuAction mmRun = MenuAction("Run Application", appFn, appInputFn)
-MenuBoolValue mmEnable = MenuBoolValue("Enable", "Disable", "Enable", &enable);
-MenuLongValue mmSpeed = MenuLongValue("Speed", "rpm", 0, 2000, 100, 10, &speed);
-MenuSmallFloatValue mmWidth = MenuSmallFloatValue("Width", "mm", 0.001, 2.5, &width);
-MenuDropDownListValue mmOperationMode = MenuDropDownListValue("Operation Mode", (const char *[]){"Automatic", "Manual", "Test", "Once (only)", nullptr}, &operationMode);
-MenuRotaryListValue mmColour = MenuRotaryListValue("Colour", (const char *[]){"Red", "Green", "Blue", "Orange", "Purple", "Cyan", "Magenta", nullptr}, &colour);
+// NOTE: ALL list values (lists of string pointers and lists or menu pointers) in DualEncoderMenuSystem
+// MUST be terminated with a nullptr - failure to do this will result in an application crash!
 
-MenuRotaryListValue cfgBrightness = MenuRotaryListValue("Volume", (const char *[]){"Minimum", "Dim", "Medium", "Bright", "Brightest", nullptr}, &brightness;
-MenuLongValue cfgVolume = MenuLongValue("Volume", "%", 0, 100, 10, 1, &volume);
+void appFn(BaseMenu *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *returningMenu);
+void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *ownerMenu);
+MenuAction mmRun = MenuAction("Run App.", appFn, appInputFn);
+
+MenuBoolValue mmDirection = MenuBoolValue("Set Rotation", "C.W.", "C.C.W", &direction);
+MenuLongValue mmSpeed = MenuLongValue("Set Speed", "rpm", 0, 2000, 100, 10, &speed);
+MenuFloatValue mmWidth = MenuFloatValue("Set Width", "mm", 0.001, 2.5, 0.1, 0.005, &width);
+MenuDropDownListValue mmOperationMode = MenuDropDownListValue("Select Mode", (const char *[]){"Automatic", "Manual", "Test", "Once (only)", nullptr}, &operationMode);
+MenuRotaryListValue mmColour = MenuRotaryListValue("Colour", (const char *[]){"Set Red", "Set Green", "Set Blue", "Set Orange", "Set Purple", "Set Cyan", "Set Magenta", nullptr}, &colour);
+
+MenuDropDownListValue cfgBrightness = MenuDropDownListValue("Set Brightness", (const char *[]){"Minimum", "Dim", "Medium", "Bright", "Brightest", nullptr}, &brightness);
+MenuLongValue cfgVolume = MenuLongValue("Set Volume", "%", 0, 100, 10, 1, &volume);
 
 Menu cfgMnu = Menu(
     "Configuration",
@@ -71,15 +77,17 @@ Menu cfgMnu = Menu(
     }
 );
 
-Menu mm = Menu(
-    "Main Menu"
+Menu mainMenu = Menu(
+    "Main Menu",
     (BaseMenu *[]) {
-mmRun,
-mmEnable,
-mmSpeed,
-mmWidth = MenuSmallFloatValue("Width", "mm", 0.001, 2.5, &width);
-mmOperationMode = MenuDropDownListValue("Operation Mode", (const char *[]){"Automatic", "Manual", "Test", "Once (only)", nullptr}, &operationMode);
-mmColour = MenuRotaryListValue("Colour", (const char *[]){"Red", "Green", "Blue", "Orange", "Purple", "Cyan", "Magenta", nullptr}, &colour);
+        &mmRun,
+        &mmDirection,
+        &cfgMnu,
+        &mmSpeed,
+        &mmWidth,
+        &mmOperationMode,
+        &mmColour,
+        nullptr
     }
 );
 
@@ -96,12 +104,14 @@ void InitEncoders()
 
 void appFn(BaseMenu *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *returningMenu)
 {
-
+    Serial.println("appFn");
 }
 
-void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *owner)
+void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *ownerMenu)
 {
-
+    Serial.println("appInputFn");
+    if (source == ENCODER_SOURCE::A && event == ENCODER_EVENT::PRESSED)
+        ownerMenu->returnFocus(source, event, value);
 }
 
 void setup() {
@@ -110,8 +120,7 @@ void setup() {
 	Wire.begin(SDA_PIN,SCL_PIN);
 
 	// Currently, the menu system only supports 1602 displays! (but you still need to specify the size!)
-
-	BaseMenu::init(16, 2, &lcd, &aEncoder, &bEncoder);
+	BaseMenu::begin(16, 2, &lcd, &aEncoder, &bEncoder);
 
 	mainMenu.takeFocus();
 }
