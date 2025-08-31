@@ -51,7 +51,7 @@ public:
     static void encoderApressed(unsigned long value);
     static void encoderBturned(long value);
     static void encoderBpressed(unsigned long value);
-    static void init(int dispWidth, int dispHeight, LiquidCrystal_I2C *lcd, RotaryEncoder *encoderA, RotaryEncoder *encoderB);
+    static void begin(int dispWidth, int dispHeight, LiquidCrystal_I2C *lcd, RotaryEncoder *encoderA, RotaryEncoder *encoderB);
 
     BaseMenu(const char *dispText);
     virtual void display(int row, bool select);
@@ -98,9 +98,11 @@ protected:
     long *value = nullptr;
     long minValue = 0;
     long maxValue = 0;
+    long coarseStep = 100;
+    long fineStep = 1;
 
 public:
-    MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long *value);
+    MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long coarseStep, long fineStep, long *value);
     void displayValue() override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };

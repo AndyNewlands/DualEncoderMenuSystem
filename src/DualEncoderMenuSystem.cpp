@@ -81,7 +81,7 @@ void BaseMenu::encoderBpressed(unsigned long value)
         currentMenu->inputHandler(ENCODER_SOURCE::B, ENCODER_EVENT::PRESSED, value);
 }
 
-void BaseMenu::init(int displayWidth, int displayHeight, LiquidCrystal_I2C *display, RotaryEncoder *Aencoder, RotaryEncoder *Bencoder)
+void BaseMenu::begin(int displayWidth, int displayHeight, LiquidCrystal_I2C *display, RotaryEncoder *Aencoder, RotaryEncoder *Bencoder)
 {
     dispWidth = displayWidth;
     dispHeight = displayHeight;
@@ -323,10 +323,13 @@ void MenuBoolValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuLongValue::MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long *value) : BaseMenu(dispText)
+MenuLongValue::MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long coarseStep, long fineStep, long *value) : BaseMenu(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
+    this->coarseStep = coarseStep > 0 ? coarseStep : 100;
+    this->fineStep = fineStep > 0 ? fineStep : 1;
+
     if (units)
         this->units = (char *)units;
     else
@@ -362,11 +365,11 @@ void MenuLongValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
         {
             if (source == ENCODER_SOURCE::A)
             {
-                *(this->value) += value == 1 ? 100 : -100;
+                *(this->value) += value == 1 ? coarseStep : 0 - coarseStep;
             }
             else
             {
-                *(this->value) += value == 1 ? 1 : -1;
+                *(this->value) += value == 1 ? fineStep : 0 - fineStep;
             }
             if (minValue != maxValue)
             {
