@@ -1,14 +1,14 @@
 #include "DualEncoderMenuSystem.h"
 
 // Define static members
-int BaseMenu::dispHeight = 0;
-int BaseMenu::dispWidth = 0;
-LiquidCrystal_I2C *BaseMenu::lcd = nullptr;
-RotaryEncoder *BaseMenu::encoderA = nullptr;
-RotaryEncoder *BaseMenu::encoderB = nullptr;
+int MenuSystem::dispHeight = 0;
+int MenuSystem::dispWidth = 0;
+LiquidCrystal_I2C *MenuSystem::lcd = nullptr;
+RotaryEncoder *MenuSystem::encoderA = nullptr;
+RotaryEncoder *MenuSystem::encoderB = nullptr;
 
-bool BaseMenu::initialised = false;
-BaseMenu *currentMenu = nullptr;
+bool MenuSystem::initialised = false;
+MenuSystem *currentMenu = nullptr;
 
 char *naStr = (char *)"N/A";
 char selectionChar = '>';
@@ -53,31 +53,31 @@ byte sparkSymbol[] = {
     0b01000,
     0b10000}; // Custom character for action/function type indicator
 
-void BaseMenu::encoderAturned(long value)
+void MenuSystem::encoderAturned(long value)
 {
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::A, ENCODER_EVENT::TURNED, value);
 }
 
-void BaseMenu::encoderApressed(unsigned long value)
+void MenuSystem::encoderApressed(unsigned long value)
 {
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::A, ENCODER_EVENT::PRESSED, value);
 }
 
-void BaseMenu::encoderBturned(long value)
+void MenuSystem::encoderBturned(long value)
 {
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::B, ENCODER_EVENT::TURNED, value);
 }
 
-void BaseMenu::encoderBpressed(unsigned long value)
+void MenuSystem::encoderBpressed(unsigned long value)
 {
     if (currentMenu)
         currentMenu->inputHandler(ENCODER_SOURCE::B, ENCODER_EVENT::PRESSED, value);
 }
 
-void BaseMenu::begin(int displayWidth, int displayHeight, LiquidCrystal_I2C *display, RotaryEncoder *Aencoder, RotaryEncoder *Bencoder)
+void MenuSystem::begin(int displayWidth, int displayHeight, LiquidCrystal_I2C *display, RotaryEncoder *Aencoder, RotaryEncoder *Bencoder)
 {
     dispWidth = displayWidth;
     dispHeight = displayHeight;
@@ -88,10 +88,10 @@ void BaseMenu::begin(int displayWidth, int displayHeight, LiquidCrystal_I2C *dis
     if (!lcd || !encoderA || !encoderB)
         return; // Can't initialise without these
 
-    encoderA->onTurned(&BaseMenu::encoderAturned);
-    encoderA->onPressed(&BaseMenu::encoderApressed);
-    encoderB->onTurned(&BaseMenu::encoderBturned);
-    encoderB->onPressed(&BaseMenu::encoderBpressed);
+    encoderA->onTurned(&MenuSystem::encoderAturned);
+    encoderA->onPressed(&MenuSystem::encoderApressed);
+    encoderB->onTurned(&MenuSystem::encoderBturned);
+    encoderB->onPressed(&MenuSystem::encoderBpressed);
     lcd->init();
     lcd->backlight();
     lcd->createChar(1, returnSymbol);
@@ -103,7 +103,7 @@ void BaseMenu::begin(int displayWidth, int displayHeight, LiquidCrystal_I2C *dis
     initialised = true;
 }
 
-BaseMenu::BaseMenu(const char *dispText)
+MenuSystem::MenuSystem(const char *dispText)
 {
     this->type = MENU_ITEM_TYPE::NONE;
     if (!dispText || ! strlen(dispText))
@@ -124,7 +124,7 @@ BaseMenu::BaseMenu(const char *dispText)
     }
 }
 
-void BaseMenu::display(int row, bool select)
+void MenuSystem::display(int row, bool select)
 {
     char outputText[17];
     sprintf(outputText, "%c%-14s%c", select ? '>' : ' ', dispText, select ? typeIndicator : ' ');
@@ -132,12 +132,12 @@ void BaseMenu::display(int row, bool select)
     lcd->print(outputText);
 }
 
-void BaseMenu::displayValue()
+void MenuSystem::displayValue()
 {
     // Default implementation does nothing
 }
 
-void BaseMenu::takeFocus()
+void MenuSystem::takeFocus()
 {
     prevMenu = currentMenu;
     currentMenu = this;
@@ -148,20 +148,20 @@ void BaseMenu::takeFocus()
     displayValue();
 }
 
-void BaseMenu::returnFocus(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void MenuSystem::returnFocus(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
     if (prevMenu == nullptr)
         return; // No previous menu to return to
     prevMenu->retakeFocus(this, source, event, value);
 }
 
-void BaseMenu::retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void MenuSystem::retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
     currentMenu = this;
     displayValue();
 }
 
-Menu::Menu(const char *dispText, BaseMenu **menuItems) : BaseMenu(dispText)
+Menu::Menu(const char *dispText, MenuSystem **menuItems) : MenuSystem(dispText)
 {
     this->menuItems = menuItems;
     for (itemCount = 0; this->menuItems[itemCount] != nullptr; itemCount++)
@@ -218,9 +218,9 @@ void Menu::takeFocus()
     displayValue();
 }
 
-void Menu::retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void Menu::retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
-    BaseMenu::retakeFocus(returningMenu, source, event, value);
+    MenuSystem::retakeFocus(returningMenu, source, event, value);
     if (event == ENCODER_EVENT::TURNED)
         inputHandler(source, event, value); // Pass on the turn event to change selection
 }
@@ -259,7 +259,7 @@ void Menu::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned lon
     }
 }
 
-MenuBoolValue::MenuBoolValue(const char *dispText, const char *trueOption, const char *falseOption, bool *value) : BaseMenu(dispText)
+MenuBoolValue::MenuBoolValue(const char *dispText, const char *trueOption, const char *falseOption, bool *value) : MenuSystem(dispText)
 {
     if (!falseOption || !strlen(falseOption))
         falseOption = (char *)naStr;
@@ -323,7 +323,7 @@ void MenuBoolValue::displayValue()
 
 void MenuBoolValue::takeFocus()
 {
-    BaseMenu::takeFocus();
+    MenuSystem::takeFocus();
     lcd->setCursor(15, 0);
     lcd->print("\001"); // 1 is the return symbol
 }
@@ -343,7 +343,7 @@ void MenuBoolValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuLongValue::MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long coarseStep, long fineStep, long *value) : BaseMenu(dispText)
+MenuLongValue::MenuLongValue(const char *dispText, const char *units, long minValue, long maxValue, long coarseStep, long fineStep, long *value) : MenuSystem(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
@@ -403,7 +403,7 @@ void MenuLongValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, uns
     }
 }
 
-MenuFloatValue::MenuFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float coarseStep, float fineStep, float *value) : BaseMenu(dispText)
+MenuFloatValue::MenuFloatValue(const char *dispText, const char *units, float minValue, float maxValue, float coarseStep, float fineStep, float *value) : MenuSystem(dispText)
 {
     this->minValue = min(minValue, maxValue);
     this->maxValue = max(minValue, maxValue);
@@ -456,7 +456,7 @@ void MenuFloatValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, un
     }
 }
 
-MenuDropDownListValue::MenuDropDownListValue(const char *dispText, const char **listItems, int *value) : BaseMenu(dispText)
+MenuDropDownListValue::MenuDropDownListValue(const char *dispText, const char **listItems, int *value) : MenuSystem(dispText)
 {
     this->listItems = (char **)listItems;
     for (itemCount = 0; listItems[itemCount] != nullptr; itemCount++)
@@ -499,7 +499,7 @@ void MenuDropDownListValue::displayValue()
 
 void MenuDropDownListValue::takeFocus()
 {
-    BaseMenu::takeFocus();
+    MenuSystem::takeFocus();
     lcd->setCursor(15, 0);
     lcd->print("\001"); // 1 is the return symbol
 }
@@ -526,7 +526,7 @@ void MenuDropDownListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT ev
     }
 }
 
-MenuRotaryListValue::MenuRotaryListValue(const char *dispText, const char **listItems, int *value) : BaseMenu(dispText)
+MenuRotaryListValue::MenuRotaryListValue(const char *dispText, const char **listItems, int *value) : MenuSystem(dispText)
 {
     this->listItems = (char **)listItems;
     for (itemCount = 0; this->listItems[itemCount] != nullptr; itemCount++)
@@ -602,9 +602,9 @@ void MenuRotaryListValue::inputHandler(ENCODER_SOURCE source, ENCODER_EVENT even
     }
 }
 
-typedef void (*action_function_t)(BaseMenu *, ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
-typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
-MenuAction::MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction) : BaseMenu(dispText)
+typedef void (*action_function_t)(MenuSystem *, ENCODER_SOURCE, ENCODER_EVENT, unsigned long, MenuSystem *);
+typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, MenuSystem *);
+MenuAction::MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction) : MenuSystem(dispText)
 {
     this->function = function;
     this->inputHandlerFunction = inputHandlerFunction;
@@ -620,7 +620,7 @@ void MenuAction::takeFocus()
     function(this, ENCODER_SOURCE::A, ENCODER_EVENT::PRESSED, 0, nullptr); // Call the function associated with this menu item (indicate we just took focus)
 }
 
-void MenuAction::retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
+void MenuAction::retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value)
 {
     currentMenu = this;
     function(this, source, event, value, returningMenu); // Call the function associated with this menu item (indicate we are retaking focus)

@@ -55,8 +55,8 @@ LiquidCrystal_I2C lcd(0x27,20,2);  // set the lcd address to 0x27 for a 16 chars
 */
 
 // Declare forward references
-void appFn(BaseMenu *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *returningMenu);
-void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *ownerMenu);
+void appFn(MenuSystem *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, MenuSystem *returningMenu);
+void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, MenuSystem *ownerMenu);
 
 // Vairables managed from "Main Menu"
 bool direction = false;
@@ -112,7 +112,7 @@ MenuDropDownListValue cfgBrightness = MenuDropDownListValue("Set Brightness", (c
 // Constuct the sub menu first, so it can be incorporated into it parent ("Main Menu")
 Menu cfgMnu = Menu(
     "Configuration",
-    (BaseMenu *[]) {
+    (MenuSystem *[]) {
         &cfgBrightness,
         &cfgVolume,
         &mmWidth, // <-- NOTE: A single menu item can be used in more than one place - mmWidth appears in the both configuration and main menus
@@ -123,7 +123,7 @@ Menu cfgMnu = Menu(
 // Now we can add the items we consturcted, above, into the main menu
 Menu mainMenu = Menu(
     "Main Menu",
-    (BaseMenu *[]) {
+    (MenuSystem *[]) {
         &mmRun,
         &mmDirection,
         &cfgMnu,
@@ -188,7 +188,7 @@ bool bRedraw = false;
 long lastAppAnimationTime = 0;
 
 // This is called from the menu to which this fn was passed (when it's clicked with one of the encoders)
-void appFn(BaseMenu *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *returningMenu)
+void appFn(MenuSystem *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, MenuSystem *returningMenu)
 {
     // When the owner menu invokes this function, ownerMenu will point to that menu
 
@@ -227,7 +227,7 @@ void appFn(BaseMenu *ownerMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsi
 
 // This function is passed to the MenuAction object constructor, and will be call when encoder input
 // is received and the action menu has been selected
-void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, BaseMenu *ownerMenu)
+void appInputFn(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value, MenuSystem *ownerMenu)
 {
     if (event == ENCODER_EVENT::PRESSED) {
         // Activate app menu when either decoder is pressed
@@ -295,8 +295,9 @@ void setup() {
     lcd.createChar(7, custChar3);
 
 	// Currently, the menu system only supports 1602 displays! (but you still need to specify the size!)
-	BaseMenu::begin(16, 2, &lcd, &aEncoder, &bEncoder);
+	MenuSystem::begin(16, 2, &lcd, &aEncoder, &bEncoder);
 
+    // Start the main menu
 	mainMenu.takeFocus();
 }
 

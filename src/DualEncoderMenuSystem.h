@@ -29,7 +29,7 @@ enum MENU_ITEM_TYPE
     ROTARY_LIST_VALUE
 };
 
-class BaseMenu
+class MenuSystem
 {
 protected:
     MENU_ITEM_TYPE type = MENU_ITEM_TYPE::NONE;
@@ -41,7 +41,7 @@ protected:
     static RotaryEncoder *encoderB;
     static bool initialised;
 
-    BaseMenu *prevMenu = nullptr;
+    MenuSystem *prevMenu = nullptr;
     char typeIndicator = 0x7E; // Indicates action (up arrow (\001 return) = return, down arrow (\002 enter) = enter menu/function, right arrow  (->) = edit value)
 
 public:
@@ -53,31 +53,31 @@ public:
     static void encoderBpressed(unsigned long value);
     static void begin(int dispWidth, int dispHeight, LiquidCrystal_I2C *lcd, RotaryEncoder *encoderA, RotaryEncoder *encoderB);
 
-    BaseMenu(const char *dispText);
+    MenuSystem(const char *dispText);
     virtual void display(int row, bool select);
     virtual void displayValue();
     virtual void takeFocus();
     virtual void returnFocus(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value);
-    virtual void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value);
+    virtual void retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value);
     virtual void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) {};
 };
 
-class Menu : public BaseMenu
+class Menu : public MenuSystem
 {
 protected:
-    BaseMenu **menuItems = nullptr;
+    MenuSystem **menuItems = nullptr;
     int itemCount = 0;
     int selectedIndex = -1;
 
 public:
-    Menu(const char *dispText, BaseMenu **menuItems);
+    Menu(const char *dispText, MenuSystem **menuItems);
     void displayValue() override;
     void takeFocus() override;
-    void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
+    void retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuBoolValue : public BaseMenu
+class MenuBoolValue : public MenuSystem
 {
 protected:
     char *falseOption = nullptr;
@@ -91,7 +91,7 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuLongValue : public BaseMenu
+class MenuLongValue : public MenuSystem
 {
 protected:
     char *units = nullptr;
@@ -107,7 +107,7 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuFloatValue : public BaseMenu
+class MenuFloatValue : public MenuSystem
 {
 protected:
     char *units = nullptr;
@@ -123,7 +123,7 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuDropDownListValue : public BaseMenu
+class MenuDropDownListValue : public MenuSystem
 {
 protected:
     int *value = nullptr;
@@ -137,7 +137,7 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-class MenuRotaryListValue : public BaseMenu
+class MenuRotaryListValue : public MenuSystem
 {
 protected:
     int row = 0;
@@ -154,10 +154,10 @@ public:
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
-typedef void (*action_function_t)(BaseMenu *, ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
-typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, BaseMenu *);
+typedef void (*action_function_t)(MenuSystem *, ENCODER_SOURCE, ENCODER_EVENT, unsigned long, MenuSystem *);
+typedef void (*input_handler_function_t)(ENCODER_SOURCE, ENCODER_EVENT, unsigned long, MenuSystem *);
 
-class MenuAction : public BaseMenu
+class MenuAction : public MenuSystem
 {
 protected:
     action_function_t function = nullptr;
@@ -166,7 +166,7 @@ protected:
 public:
     MenuAction(const char *dispText, action_function_t function, input_handler_function_t inputHandlerFunction);
     void takeFocus() override;
-    void retakeFocus(BaseMenu *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
+    void retakeFocus(MenuSystem *returningMenu, ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
     void inputHandler(ENCODER_SOURCE source, ENCODER_EVENT event, unsigned long value) override;
 };
 
