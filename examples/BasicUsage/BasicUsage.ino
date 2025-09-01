@@ -258,6 +258,7 @@ void appDrawData()
 
 void appAnimate()
 {
+    char c;
     // THIS simply animates the display to represent  some other app doing some "work"
     // (you'll write your own version of )
     if (bRedraw && (mode == MODE::APP_PAUSED || MODE::APP_RUNNING)) {
@@ -269,11 +270,15 @@ void appAnimate()
         return; // No updates unless the app is running (and not just paused)
  
     long now = millis();
-    if (now - lastAppAnimationTime < 200)
+    if (now - lastAppAnimationTime < 300)
          return;
     // Update (animate the appData)
-    for (int i = 0; i < 16; i++)
-        appData[i] = random(5, 8);
+    for (int i = 0; i < 16; i++) {
+        c = random(4, 8);
+        if (c == 4)
+            c = 0x20;
+        appData[i] = c;
+    }
     lastAppAnimationTime = now;
 
     // Display the updated data
