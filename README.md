@@ -80,7 +80,9 @@ The example code shows how to implement the following simple menu structure...
 
 ## Issues / Contributions
 
-If you have any issues with this library, or have a feature request, log it on GitHub.
+If you have any issues with this library, or have a feature request, please log it on GitHub.  A bug report template and a feature request template have been set up for this purpose.
 
 If you wish to contribute, please feel free to make a pull-request.
+
+**This is a part-time voluntarily supported library, so I make no guarantees as to its fitness for pupose, reliability, or the timeframes for responses to bug rports or featue requests.  It's all done on best endeavours.  Hope you understand...
 
