@@ -51,7 +51,7 @@ Only 16 x 2 LCD displays are currently supported. With a little more work, the c
 Method-wise, there really isn't anything else to be aware of BUT to use this effectively, you need to understand how the Menu System should be structured and, most importantly, understand how the `MenuAction` works.  Reading/running/experimenting-with the provided example is the best way to achieve that.
 
 ## Example
-The provided example show an example of using each of the `Menu System` classes, including nesting menus and invokving an Action (using `MenuAction`) and how maintaining state imformation allows your Action to continue "running" while still allowing the loop() function to be regularly called (I.E. without "blocking")
+The provided example show an example of using each of the _Menu System_ classes, including nesting menus and invokving an Action (using `MenuAction`) and how maintaining state imformation allows your Action to continue "running" while still allowing the loop() function to be regularly called (I.E. without "blocking")
 
 ## Issues / Contributions
 
