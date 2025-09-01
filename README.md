@@ -53,9 +53,34 @@ Method-wise, there really isn't anything else to be aware of BUT to use this eff
 ## Example
 The provided example show an example of using each of the _Menu System_ classes, including nesting menus and invokving an Action (using `MenuAction`) and how maintaining state imformation allows your Action to continue "running" while still allowing the loop() function to be regularly called (I.E. without "blocking")
 
+The example code shows how to implement the following simple menu structure...
+
+'/* Menu structure...
+
+    MainMenu
+    |
+    |--Run Application   // MenuAction
+    |
+    |--Enable            // MenuBoolValue
+    |
+    |--Speed             // MenuLongValue
+    |
+    |--Width             // MenuSmallFloatValue
+    |
+    |--Operation Mode    // MenuDropDownListValue
+    |
+    |--Colour            // MenuRotaryListValue
+    |
+    |--Configuration     // Menu
+        |
+        |--Brightness        // MenuRotaryListValue
+        |
+        |--Volume            // MenuLongValue
+*/'
+
 ## Issues / Contributions
 
-If you have any issues with this library, or have a feature request, please use the form provided HERE
+If you have any issues with this library, or have a feature request, log it on GitHub.
 
 If you wish to contribute, please feel free to make a pull-request.
 
