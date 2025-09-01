@@ -5,6 +5,10 @@
 #include <ESP32RotaryEncoder.h>
 #include <DualEncoderMenuSystem.h>
 
+/*********************************************************************************************************/
+//
+// IMPORTANT: Please remember to changes these definitions to match the pins use are using in your circuit
+//
 #define A_ENCODER_A 21
 #define A_ENCODER_B 22
 #define A_ENCODER_SW 23
@@ -15,6 +19,8 @@
 
 #define SDA_PIN 18
 #define SCL_PIN 19
+//
+/**********************************************************************************************************/
 
 enum MODE {
     NORMAL,
@@ -288,13 +294,15 @@ void appAnimate()
 void setup() {
     // In case we want to get some serial data
     Serial.begin(115200);
-    // Musr initilise the TWO encoders
+    // Must initilise the TWO encoders
 	InitEncoders();
     // Must call this (or no LCD output will be generated)
-	Wire.begin(SDA_PIN,SCL_PIN);
+	Wire.begin(SDA_PIN, SCL_PIN);
 
     // NOTE: The menu system uses custom characters 1,2 & 3
-    // These are used as part of the app animation
+
+    // THESE are used as part of the Action animation
+    // (note who I do not overrwite 1, 2,3)
     lcd.createChar(5, custChar1);
     lcd.createChar(6, custChar2);
     lcd.createChar(7, custChar3);
@@ -307,5 +315,14 @@ void setup() {
 }
 
 void loop() {
+    // It's good practice to implement your "Actions" in a non-blocking way,
+    // so this loop() fun can continue to be called at regular intervals
+
+    // appAnimate() will do a small amount of work on behalf of the Action
+    // (invokded from MenuAction) before returning control
     appAnimate();
+
+    // Other items which need to be regularly serviced (stepper motors, for example)
+    // can have their service functions call here...
+    // ....
 }
